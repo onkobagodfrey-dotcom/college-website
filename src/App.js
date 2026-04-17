@@ -4,9 +4,37 @@ function App() {
   const [page, setPage] = useState("home");
 
   const renderPage = () => {
-    switch (page) {
-      case "home":
-  return (
+  switch (page) {
+
+    case "home":
+      return (
+        <div>
+          <h2>Home Page</h2>
+        </div>
+      );
+
+    case "about":
+      return <h2>About</h2>;
+
+    case "courses":
+      return <h2>Courses</h2>;
+
+    case "contact":
+      return <h2>Contact</h2>;
+
+    case "login":
+      return (
+        <div>
+          <h2>Login</h2>
+          <input placeholder="Username" />
+          <input placeholder="Password" />
+        </div>
+      );
+
+    default:
+      return <h2>Home</h2>;
+  }
+};
     <div style={{ textAlign: "center" }}>
 
       <h2 style={{ color: "#003366" }}>
