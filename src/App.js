@@ -10,7 +10,7 @@ function App() {
         return (
           <div style={{ textAlign: "center" }}>
             <h2>Welcome to Gosotech Computer Training College 🎓</h2>
-            <p>Empowering students with modern computer skills.</p>
+            <p>Empowering students with modern computer skills and technology training.</p>
           </div>
         );
 
@@ -38,14 +38,62 @@ function App() {
 
                 if (user === "student" && pass === "1234") {
                   alert("Login successful ✅");
-                  setPage("home");
+                  setPage("dashboard");
                 } else {
                   alert("Wrong username or password ❌");
                 }
               }}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#003366",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer"
+              }}
             >
               Login
             </button>
+          </div>
+        );
+
+      case "dashboard":
+        return (
+          <div style={{ textAlign: "center", marginTop: "40px" }}>
+            <h2>🎓 Student Dashboard</h2>
+
+            <p>Welcome back, Student 👋</p>
+
+            <div style={{ marginTop: "20px" }}>
+              <div style={{ padding: "15px", backgroundColor: "#e6f0ff", margin: "10px", borderRadius: "10px" }}>
+                <h3>📊 Progress</h3>
+                <p>Completed Courses: 2</p>
+              </div>
+
+              <div style={{ padding: "15px", backgroundColor: "#e6ffe6", margin: "10px", borderRadius: "10px" }}>
+                <h3>📚 Enrolled Courses</h3>
+                <p>ICT, Programming</p>
+              </div>
+
+              <div style={{ padding: "15px", backgroundColor: "#ffe6e6", margin: "10px", borderRadius: "10px" }}>
+                <h3>📅 Attendance</h3>
+                <p>85%</p>
+              </div>
+
+              <button
+                onClick={() => setPage("home")}
+                style={{
+                  marginTop: "20px",
+                  padding: "10px 20px",
+                  backgroundColor: "#003366",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px"
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         );
 
@@ -56,7 +104,7 @@ function App() {
 
   return (
     <div style={{ fontFamily: "Arial" }}>
-      
+
       <header style={{ backgroundColor: "#003366", color: "white", padding: "20px", textAlign: "center" }}>
         <h1>Gosotech Computer Training College</h1>
       </header>
@@ -67,6 +115,7 @@ function App() {
         <button onClick={() => setPage("courses")}>Courses</button>
         <button onClick={() => setPage("contact")}>Contact</button>
         <button onClick={() => setPage("login")}>Login</button>
+        <button onClick={() => setPage("dashboard")}>Dashboard</button>
       </nav>
 
       <main style={{ padding: "20px", textAlign: "center" }}>
