@@ -1,22 +1,18 @@
 import { useState } from "react";
-import { auth } from "./firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { db } from "./firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 function App() {
   const [page, setPage] = useState("home");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [students, setStudents] = useState([]);
 
-  const loginUser = async () => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      alert("Login successful ✅");
-      setPage("dashboard");
-    } catch (error) {
-      alert(error.message);
-    }
+  // 🔥 FETCH STUDENTS FROM FIRESTORE
+  const fetchStudents = async () => {
+    const data = await getDocs(collection(db, "students"));
+    setStudents(data.docs.map(doc => ({ ...doc.data(), id: doc.id })));
   };
 
+  // 📄 PAGE CONTENT
   const renderPage = () => {
     switch (page) {
 
@@ -37,77 +33,44 @@ function App() {
       case "contact":
         return <h2>Contact us: 0700 000 000</h2>;
 
-      case "login":
+      case "dashboard":
         return (
-          <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h2>Student Login</h2>
-
-            <input
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            /><br /><br />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            /><br /><br />
+          <div style={{ textAlign: "center", marginTop: "30px" }}>
+            <h2>🎓 Student Dashboard</h2>
 
             <button
-              onClick={loginUser}
+              onClick={fetchStudents}
               style={{
-                padding: "10px 20px",
+                padding: "10px",
                 backgroundColor: "#003366",
                 color: "white",
                 border: "none",
-                borderRadius: "5px",
-                cursor: "pointer"
+                marginBottom: "20px"
               }}
             >
-              Login
+              Load Students
             </button>
-          </div>
-        );
 
-      case "dashboard":
-        return (
-          <div style={{ textAlign: "center", marginTop: "40px" }}>
-            <h2>🎓 Student Dashboard</h2>
+            {students.length === 0 && <p>No students loaded yet.</p>}
 
-            <p>Welcome back, Student 👋</p>
-
-            <div style={{ marginTop: "20px" }}>
-              <div style={{ padding: "15px", backgroundColor: "#e6f0ff", margin: "10px", borderRadius: "10px" }}>
-                <h3>📊 Progress</h3>
-                <p>Completed Courses: 2</p>
-              </div>
-
-              <div style={{ padding: "15px", backgroundColor: "#e6ffe6", margin: "10px", borderRadius: "10px" }}>
-                <h3>📚 Enrolled Courses</h3>
-                <p>ICT, Programming</p>
-              </div>
-
-              <div style={{ padding: "15px", backgroundColor: "#ffe6e6", margin: "10px", borderRadius: "10px" }}>
-                <h3>📅 Attendance</h3>
-                <p>85%</p>
-              </div>
-
-              <button
-                onClick={() => setPage("home")}
+            {students.map((s) => (
+              <div
+                key={s.id}
                 style={{
-                  marginTop: "20px",
-                  padding: "10px 20px",
-                  backgroundColor: "#003366",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px"
+                  margin: "10px auto",
+                  padding: "10px",
+                  border: "1px solid #ccc",
+                  width: "300px",
+                  borderRadius: "8px"
                 }}
               >
-                Logout
-              </button>
-            </div>
+                <h3>{s.name}</h3>
+                <p>{s.email}</p>
+                <p>Course: {s.course}</p>
+                <p>Progress: {s.progress}%</p>
+                <p>Attendance: {s.attendance}%</p>
+              </div>
+            ))}
           </div>
         );
 
@@ -118,26 +81,31 @@ function App() {
 
   return (
     <div style={{ fontFamily: "Arial" }}>
+      
+      {/* HEADER */}
       <header style={{ backgroundColor: "#003366", color: "white", padding: "20px", textAlign: "center" }}>
         <h1>Gosotech Computer Training College</h1>
       </header>
 
+      {/* NAVIGATION */}
       <nav style={{ backgroundColor: "#003366", padding: "10px", textAlign: "center" }}>
         <button onClick={() => setPage("home")}>Home</button>
         <button onClick={() => setPage("about")}>About</button>
         <button onClick={() => setPage("courses")}>Courses</button>
         <button onClick={() => setPage("contact")}>Contact</button>
-        <button onClick={() => setPage("login")}>Login</button>
         <button onClick={() => setPage("dashboard")}>Dashboard</button>
       </nav>
 
-      <main style={{ padding: "20px", textAlign: "center" }}>
+      {/* PAGE CONTENT */}
+      <main style={{ padding: "20px" }}>
         {renderPage()}
       </main>
 
+      {/* FOOTER */}
       <footer style={{ backgroundColor: "#003366", color: "white", padding: "10px", textAlign: "center" }}>
         <p>© 2026 Gosotech Computer Training College</p>
       </footer>
+
     </div>
   );
 }
