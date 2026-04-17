@@ -48,7 +48,7 @@ function App() {
       case "contact":
         return <h2>Contact us: 0700 000 000</h2>;
 
-       case "login":
+      case "login":
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
 
@@ -84,23 +84,35 @@ function App() {
     </div>
   );
 
+ case "login":
   return (
-    <div style={{ maxWidth: "300px", margin: "auto" }}>
-      <h2>Login</h2>
+    <div style={{ textAlign: "center", marginTop: "50px" }}>
+      <h2>Student Login</h2>
 
-      <input
-        type="text"
-        placeholder="Username"
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
+      <input id="user" placeholder="Username" /><br /><br />
+      <input id="pass" type="password" placeholder="Password" /><br /><br />
 
-      <input
-        type="password"
-        placeholder="Password"
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
+      <button
+        onClick={() => {
+          const user = document.getElementById("user").value;
+          const pass = document.getElementById("pass").value;
 
-      <button style={{ width: "100%", padding: "10px", backgroundColor: "blue", color: "white" }}>
+          if (user === "student" && pass === "1234") {
+            alert("Login successful ✅");
+            setPage("home");
+          } else {
+            alert("Wrong username or password ❌");
+          }
+        }}
+        style={{
+          padding: "10px 20px",
+          backgroundColor: "#003366",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer"
+        }}
+      >
         Login
       </button>
     </div>
