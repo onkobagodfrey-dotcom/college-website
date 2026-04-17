@@ -1,7 +1,21 @@
 import { useState } from "react";
+import { auth } from "./firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 function App() {
   const [page, setPage] = useState("home");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const loginUser = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      alert("Login successful ✅");
+      setPage("dashboard");
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   const renderPage = () => {
     switch (page) {
@@ -10,7 +24,7 @@ function App() {
         return (
           <div style={{ textAlign: "center" }}>
             <h2>Welcome to Gosotech Computer Training College 🎓</h2>
-            <p>Empowering students with modern computer skills and technology training.</p>
+            <p>Empowering students with modern computer skills.</p>
           </div>
         );
 
@@ -28,21 +42,21 @@ function App() {
           <div style={{ textAlign: "center", marginTop: "50px" }}>
             <h2>Student Login</h2>
 
-            <input id="user" placeholder="Username" /><br /><br />
-            <input id="pass" type="password" placeholder="Password" /><br /><br />
+            <input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            /><br /><br />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            /><br /><br />
 
             <button
-              onClick={() => {
-                const user = document.getElementById("user").value;
-                const pass = document.getElementById("pass").value;
-
-                if (user === "student" && pass === "1234") {
-                  alert("Login successful ✅");
-                  setPage("dashboard");
-                } else {
-                  alert("Wrong username or password ❌");
-                }
-              }}
+              onClick={loginUser}
               style={{
                 padding: "10px 20px",
                 backgroundColor: "#003366",
@@ -104,7 +118,6 @@ function App() {
 
   return (
     <div style={{ fontFamily: "Arial" }}>
-
       <header style={{ backgroundColor: "#003366", color: "white", padding: "20px", textAlign: "center" }}>
         <h1>Gosotech Computer Training College</h1>
       </header>
@@ -125,7 +138,6 @@ function App() {
       <footer style={{ backgroundColor: "#003366", color: "white", padding: "10px", textAlign: "center" }}>
         <p>© 2026 Gosotech Computer Training College</p>
       </footer>
-
     </div>
   );
 }
