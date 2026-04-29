@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 
 import Login from "./Login";
 import Admin from "./Admin";
@@ -8,7 +9,14 @@ import Contact from "./Contact";
 import Register from "./Register";
 import ProtectedRoute from "./ProtectedRoute";
 
+import { getActiveCourses } from "./utils/courseLoader";
+
 function App() {
+
+  useEffect(() => {
+    console.log("Active Courses:", getActiveCourses());
+  }, []);
+
   return (
     <Router>
       <Routes>
