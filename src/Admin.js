@@ -6,11 +6,16 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  updateDoc
+  updateDoc,
+  setDoc,
+  getDoc
 } from "firebase/firestore";
 
 export default function Admin() {
 
+  // =====================
+  // STATES
+  // =====================
   const [students, setStudents] = useState([]);
   const [name, setName] = useState("");
   const [course, setCourse] = useState("");
@@ -38,6 +43,7 @@ export default function Admin() {
       setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     });
+
     return () => unsub();
   }, []);
 
@@ -48,6 +54,7 @@ export default function Admin() {
     const unsub = onSnapshot(collection(db, "courses"), (snap) => {
       setCourses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
     return () => unsub();
   }, []);
 
@@ -77,17 +84,20 @@ export default function Admin() {
     const unsub = onSnapshot(collection(db, "liveClasses"), (snap) => {
       setLiveClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
     return () => unsub();
   }, []);
 
   // =====================
-  // COURSE
+  // ADD COURSE
   // =====================
   const addCourse = async () => {
     if (!newCourse.trim()) return;
 
+    const courseId = newCourse.trim().toLowerCase();
+
     await addDoc(collection(db, "courses"), {
-      id: newCourse.toLowerCase(),
+      id: courseId,
       name: newCourse.trim()
     });
 
@@ -95,7 +105,56 @@ export default function Admin() {
   };
 
   // =====================
-  // TOPIC
+  // ADD STUDENT (FIXED ENROLLMENT SYSTEM)
+  // =====================
+  const addStudent = async () => {
+    if (!name || !course || !email) return;
+
+    const uid = email.trim().toLowerCase();
+    const courseId = course.toLowerCase();
+
+    // =====================
+    // 1. CREATE STUDENT PROFILE
+    // =====================
+    await setDoc(doc(db, "students", uid), {
+      name: name.trim(),
+      email: uid
+    });
+
+    // =====================
+    // 2. CREATE / UPDATE ENROLLMENT
+    // =====================
+    const enrollRef = doc(db, "enrollments", uid);
+    const snap = await getDoc(enrollRef);
+
+    if (snap.exists()) {
+      const existing = snap.data().courses || [];
+
+      if (!existing.includes(courseId)) {
+        await updateDoc(enrollRef, {
+          courses: [...existing, courseId]
+        });
+      }
+    } else {
+      await setDoc(enrollRef, {
+        courses: [courseId]
+      });
+    }
+
+    setName("");
+    setCourse("");
+    setEmail("");
+  };
+
+  // =====================
+  // DELETE STUDENT
+  // =====================
+  const deleteStudent = async (id) => {
+    await deleteDoc(doc(db, "students", id));
+  };
+
+  // =====================
+  // TOPIC ADD
   // =====================
   const addTopic = async () => {
     if (!topicTitle || !topicContent || !topicCourse) return;
@@ -110,6 +169,9 @@ export default function Admin() {
     setTopicContent("");
   };
 
+  // =====================
+  // TOPIC UPDATE
+  // =====================
   const updateTopic = async () => {
     if (!editId) return;
 
@@ -124,6 +186,9 @@ export default function Admin() {
     setEditId(null);
   };
 
+  // =====================
+  // TOPIC DELETE
+  // =====================
   const deleteTopic = async (id) => {
     await deleteDoc(doc(db, "courses", topicCourse, "topics", id));
   };
@@ -135,36 +200,14 @@ export default function Admin() {
   };
 
   // =====================
-  // STUDENT
-  // =====================
-  const addStudent = async () => {
-    if (!name || !course || !email) return;
-
-    await addDoc(collection(db, "students"), {
-      name: name.trim(),
-      course,
-      email: email.trim()
-    });
-
-    setName("");
-    setCourse("");
-    setEmail("");
-  };
-
-  const deleteStudent = async (id) => {
-    await deleteDoc(doc(db, "students", id));
-  };
-
-  // =====================
-  // LIVE CLASS (FIXED + SAFE)
+  // LIVE CLASS TOGGLE
   // =====================
   const toggleLiveClass = async (courseName) => {
 
     const active = liveClasses.find(
-      l => l.course === courseName && l.isLive === true
+      l => l.course === courseName && l.isLive
     );
 
-    // STOP IF EXISTS
     if (active) {
       await updateDoc(doc(db, "liveClasses", active.id), {
         isLive: false,
@@ -173,19 +216,6 @@ export default function Admin() {
       return;
     }
 
-    // OPTIONAL SAFETY: stop other live sessions of same course first
-    const duplicates = liveClasses.filter(
-      l => l.course === courseName && l.isLive === true
-    );
-
-    for (let d of duplicates) {
-      await updateDoc(doc(db, "liveClasses", d.id), {
-        isLive: false,
-        endedAt: new Date()
-      });
-    }
-
-    // START NEW LIVE
     await addDoc(collection(db, "liveClasses"), {
       course: courseName,
       isLive: true,
@@ -214,7 +244,7 @@ export default function Admin() {
 
       <hr />
 
-      {/* LIVE */}
+      {/* LIVE CLASSES */}
       <h3>🎥 Live Classes</h3>
 
       {courses.map(c => {
@@ -223,7 +253,7 @@ export default function Admin() {
         );
 
         return (
-          <div key={c.id} style={{ marginBottom: 10 }}>
+          <div key={c.id}>
             <b>{c.name}</b>
 
             <button
@@ -231,14 +261,13 @@ export default function Admin() {
               style={{
                 marginLeft: 10,
                 background: isLive ? "red" : "green",
-                color: "white",
-                padding: 5
+                color: "white"
               }}
             >
               {isLive ? "STOP LIVE" : "START LIVE"}
             </button>
 
-            {isLive && " 🔴 LIVE NOW"}
+            {isLive && " 🔴 LIVE"}
           </div>
         );
       })}
@@ -251,7 +280,9 @@ export default function Admin() {
       <select onChange={(e) => setTopicCourse(e.target.value)}>
         <option value="">Select Course</option>
         {courses.map(c => (
-          <option key={c.id} value={c.id}>{c.name}</option>
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
         ))}
       </select>
 
@@ -303,7 +334,9 @@ export default function Admin() {
       <select onChange={(e) => setCourse(e.target.value)}>
         <option value="">Select Course</option>
         {courses.map(c => (
-          <option key={c.id} value={c.name}>{c.name}</option>
+          <option key={c.id} value={c.name.toLowerCase()}>
+            {c.name}
+          </option>
         ))}
       </select>
 
@@ -326,7 +359,7 @@ export default function Admin() {
       ) : (
         students.map(s => (
           <div key={s.id}>
-            {s.name} - {s.course}
+            {s.name} - {s.email}
             <button onClick={() => deleteStudent(s.id)}>Delete</button>
           </div>
         ))

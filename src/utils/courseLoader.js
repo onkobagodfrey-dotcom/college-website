@@ -1,22 +1,28 @@
 import { courses } from "../data/courses.config";
 import { hssSeries } from "../data/hss.series";
 
+// Normalize helper (VERY IMPORTANT)
+const normalize = (id) => id?.toLowerCase()?.trim();
+
 export function getActiveCourses() {
   return courses.filter(c => c.active);
 }
 
 export function getCourseContent(id) {
-  if (id === "ic3") {
-    return ["Word", "Excel", "Internet", "Email"];
-  }
+  const key = normalize(id);
 
-  if (id === "aic3") {
-    return ["Advanced Word", "Advanced Excel", "Security"];
-  }
+  switch (key) {
 
-  if (id === "hss") {
-    return hssSeries;
-  }
+    case "ic3":
+      return ["Word", "Excel", "Internet", "Email"];
 
-  return [];
+    case "aic3":
+      return ["Advanced Word", "Advanced Excel", "Security"];
+
+    case "hss":
+      return hssSeries;
+
+    default:
+      return [];
+  }
 }
