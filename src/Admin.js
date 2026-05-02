@@ -1,3 +1,6 @@
+import { signOut } from "firebase/auth";
+import { auth } from "./firebase";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import {
@@ -12,6 +15,16 @@ import {
 } from "firebase/firestore";
 
 export default function Admin() {
+
+  // =====================
+  // NAVIGATION + LOGOUT
+  // =====================
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/login");
+  };
 
   // =====================
   // STATES
@@ -32,6 +45,7 @@ export default function Admin() {
   const [topics, setTopics] = useState([]);
 
   const [liveClasses, setLiveClasses] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -89,6 +103,19 @@ export default function Admin() {
   }, []);
 
   // =====================
+  // ENROLLMENT TABLE
+  // =====================
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "studentEnrollments"), (snap) => {
+      setEnrollments(
+        snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      );
+    });
+
+    return () => unsub();
+  }, []);
+
+  // =====================
   // ADD COURSE
   // =====================
   const addCourse = async () => {
@@ -105,41 +132,26 @@ export default function Admin() {
   };
 
   // =====================
-  // ADD STUDENT (FIXED ENROLLMENT SYSTEM)
+  // ADD STUDENT (FIXED)
   // =====================
   const addStudent = async () => {
     if (!name || !course || !email) return;
 
     const uid = email.trim().toLowerCase();
-    const courseId = course.toLowerCase();
+    const courseId = course;
 
-    // =====================
-    // 1. CREATE STUDENT PROFILE
-    // =====================
     await setDoc(doc(db, "students", uid), {
       name: name.trim(),
       email: uid
     });
 
-    // =====================
-    // 2. CREATE / UPDATE ENROLLMENT
-    // =====================
-    const enrollRef = doc(db, "enrollments", uid);
-    const snap = await getDoc(enrollRef);
-
-    if (snap.exists()) {
-      const existing = snap.data().courses || [];
-
-      if (!existing.includes(courseId)) {
-        await updateDoc(enrollRef, {
-          courses: [...existing, courseId]
-        });
-      }
-    } else {
-      await setDoc(enrollRef, {
-        courses: [courseId]
-      });
-    }
+    // Save enrollment record (clean structure)
+    await setDoc(doc(db, "studentEnrollments", uid + "_" + courseId), {
+      name: name.trim(),
+      email: uid,
+      course: courseId,
+      createdAt: new Date()
+    });
 
     setName("");
     setCourse("");
@@ -147,14 +159,21 @@ export default function Admin() {
   };
 
   // =====================
-  // DELETE STUDENT
+  // DELETE STUDENT (FIXED)
   // =====================
-  const deleteStudent = async (id) => {
+  const deleteStudent = async (id, email) => {
     await deleteDoc(doc(db, "students", id));
+
+    // remove enrollment rows linked to this student
+    const q = enrollments.filter(e => e.email === email);
+
+    for (let e of q) {
+      await deleteDoc(doc(db, "studentEnrollments", e.id));
+    }
   };
 
   // =====================
-  // TOPIC ADD
+  // TOPIC FUNCTIONS
   // =====================
   const addTopic = async () => {
     if (!topicTitle || !topicContent || !topicCourse) return;
@@ -169,9 +188,6 @@ export default function Admin() {
     setTopicContent("");
   };
 
-  // =====================
-  // TOPIC UPDATE
-  // =====================
   const updateTopic = async () => {
     if (!editId) return;
 
@@ -186,9 +202,6 @@ export default function Admin() {
     setEditId(null);
   };
 
-  // =====================
-  // TOPIC DELETE
-  // =====================
   const deleteTopic = async (id) => {
     await deleteDoc(doc(db, "courses", topicCourse, "topics", id));
   };
@@ -200,29 +213,31 @@ export default function Admin() {
   };
 
   // =====================
-  // LIVE CLASS TOGGLE
+  // LIVE CLASS
   // =====================
   const toggleLiveClass = async (courseName) => {
 
-    const active = liveClasses.find(
-      l => l.course === courseName && l.isLive
-    );
+  // 1. FIND ANY ACTIVE LIVE CLASS
+  const activeSessions = liveClasses.filter(l => l.isLive);
 
-    if (active) {
-      await updateDoc(doc(db, "liveClasses", active.id), {
-        isLive: false,
-        endedAt: new Date()
-      });
-      return;
-    }
-
-    await addDoc(collection(db, "liveClasses"), {
-      course: courseName,
-      isLive: true,
-      startedAt: new Date(),
-      link: "https://meet.google.com/new"
+  // 2. STOP ALL ACTIVE FIRST (IMPORTANT FIX)
+  for (let session of activeSessions) {
+    await updateDoc(doc(db, "liveClasses", session.id), {
+      isLive: false,
+      endedAt: new Date()
     });
-  };
+  }
+
+  // 3. START NEW ONE ONLY
+  await addDoc(collection(db, "liveClasses"), {
+    course: courseName,
+    isLive: true,
+    startedAt: new Date(),
+    link: "https://meet.google.com/new"
+  });
+
+  window.open("https://meet.google.com/new", "_blank");
+};
 
   // =====================
   // UI
@@ -230,26 +245,40 @@ export default function Admin() {
   return (
     <div style={{ padding: 20, textAlign: "center" }}>
 
+      {/* LOGOUT */}
+      <button
+        onClick={handleLogout}
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          padding: 10,
+          background: "red",
+          color: "white",
+          border: "none",
+          borderRadius: 5
+        }}
+      >
+        Logout
+      </button>
+
       <h2>🧑‍💻 LMS Admin Dashboard</h2>
 
       <hr />
 
       {/* COURSES */}
       <h3>📚 Add Course</h3>
-      <input
-        value={newCourse}
-        onChange={(e) => setNewCourse(e.target.value)}
-      />
+      <input value={newCourse} onChange={(e) => setNewCourse(e.target.value)} />
       <button onClick={addCourse}>Add</button>
 
       <hr />
 
-      {/* LIVE CLASSES */}
+      {/* LIVE */}
       <h3>🎥 Live Classes</h3>
 
       {courses.map(c => {
         const isLive = liveClasses.find(
-          l => l.course === c.name && l.isLive
+          l => l.course?.toLowerCase().trim() === c.name?.toLowerCase().trim()
         );
 
         return (
@@ -280,28 +309,16 @@ export default function Admin() {
       <select onChange={(e) => setTopicCourse(e.target.value)}>
         <option value="">Select Course</option>
         {courses.map(c => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
+          <option key={c.id} value={c.id}>{c.name}</option>
         ))}
       </select>
 
       <br /><br />
 
-      <input
-        placeholder="Title"
-        value={topicTitle}
-        onChange={(e) => setTopicTitle(e.target.value)}
-      />
-
+      <input value={topicTitle} onChange={(e) => setTopicTitle(e.target.value)} />
       <br /><br />
 
-      <textarea
-        placeholder="Content"
-        value={topicContent}
-        onChange={(e) => setTopicContent(e.target.value)}
-      />
-
+      <textarea value={topicContent} onChange={(e) => setTopicContent(e.target.value)} />
       <br /><br />
 
       <button onClick={editId ? updateTopic : addTopic}>
@@ -310,60 +327,64 @@ export default function Admin() {
 
       <hr />
 
-      {topics.map(t => (
-        <div key={t.id}>
-          <h4>{t.title}</h4>
-          <button onClick={() => startEdit(t)}>Edit</button>
-          <button onClick={() => deleteTopic(t.id)}>Delete</button>
-        </div>
-      ))}
-
-      <hr />
-
       {/* STUDENTS */}
       <h3>👨‍🎓 Students</h3>
 
-      <input
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-
+      <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
       <br /><br />
 
       <select onChange={(e) => setCourse(e.target.value)}>
         <option value="">Select Course</option>
         {courses.map(c => (
-          <option key={c.id} value={c.name.toLowerCase()}>
-            {c.name}
-          </option>
+          <option key={c.id} value={c.id}>{c.name}</option>
         ))}
       </select>
 
       <br /><br />
 
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-
+      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <br /><br />
 
       <button onClick={addStudent}>Add Student</button>
 
       <hr />
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        students.map(s => (
-          <div key={s.id}>
-            {s.name} - {s.email}
-            <button onClick={() => deleteStudent(s.id)}>Delete</button>
-          </div>
-        ))
-      )}
+      {/* ENROLLMENT TABLE */}
+      <h3>📊 Student Enrollment Table</h3>
+
+      <table border="1" cellPadding="10" style={{ margin: "0 auto", background: "white" }}>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Course</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {enrollments.map(e => (
+            <tr key={e.id}>
+              <td>{e.name}</td>
+              <td>{e.email}</td>
+              <td>{e.course}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <hr />
+
+      {/* STUDENT LIST */}
+      <h3>👥 Students List</h3>
+
+      {students.map(s => (
+        <div key={s.id}>
+          {s.name} - {s.email}
+          <button onClick={() => deleteStudent(s.id, s.email)}>
+            Delete
+          </button>
+        </div>
+      ))}
 
     </div>
   );

@@ -12,9 +12,6 @@ import { useNavigate } from "react-router-dom";
 
 export default function StudentDashboard() {
 
-  // =====================
-  // STATES
-  // =====================
   const [courses, setCourses] = useState([]);
   const [topics, setTopics] = useState([]);
   const [liveSessions, setLiveSessions] = useState([]);
@@ -46,7 +43,7 @@ export default function StudentDashboard() {
   }, [navigate]);
 
   // =====================
-  // ENROLLMENTS (FIXED SAFE READ)
+  // ENROLLMENTS
   // =====================
   useEffect(() => {
     if (!user) return;
@@ -54,13 +51,12 @@ export default function StudentDashboard() {
     const load = async () => {
       setEnrollLoading(true);
 
-      const ref = doc(db, "enrollments", user.uid);
+      const ref = doc(db, "enrollments", user.email.toLowerCase());
       const snap = await getDoc(ref);
 
       if (snap.exists()) {
         const data = snap.data();
 
-        // normalize safely
         setEnrolledCourses(
           (data.courses || []).map(c => c.toLowerCase())
         );
@@ -131,7 +127,7 @@ export default function StudentDashboard() {
   }, []);
 
   // =====================
-  // COURSE NORMALIZATION FIX
+  // NORMALIZATION
   // =====================
   const selectedCourseData =
     courses.find(c => c.id === selectedCourse);
@@ -140,19 +136,20 @@ export default function StudentDashboard() {
     selectedCourseData?.name?.toLowerCase();
 
   // =====================
-  // FIXED ENROLLMENT CHECK (IMPORTANT FIX)
+  // ✅ FIXED ENROLLMENT CHECK (COMBINED SAFE)
   // =====================
   const isEnrolled =
     selectedCourse
-      ? enrolledCourses.includes(selectedCourseName)
+      ? enrolledCourses.includes(selectedCourse) || // NEW (correct)
+        enrolledCourses.includes(selectedCourseName) // OLD support
       : true;
 
   // =====================
-  // SESSION FILTER
+  // LIVE FILTER
   // =====================
   const filteredSessions = selectedCourse
     ? liveSessions.filter(s =>
-        s.course?.toLowerCase() === selectedCourseName
+       s.course?.toLowerCase().trim() === selectedCourseName?.toLowerCase().trim()
       )
     : liveSessions;
 
@@ -160,17 +157,21 @@ export default function StudentDashboard() {
   // STATUS
   // =====================
   const getSessionStatus = (session) => {
-    if (!session.startTime) return "upcoming";
+  if (!session.startedAt) return "upcoming";
 
-    const now = new Date().getTime();
-    const start = session.startTime.toDate().getTime();
-    const duration = session.duration || 60;
-    const end = start + duration * 60000;
+  const now = new Date().getTime();
 
-    if (now >= start && now <= end) return "live";
-    if (now < start) return "upcoming";
-    return "ended";
-  };
+  const start =
+    session.startedAt?.toDate?.().getTime?.() || now;
+
+  const duration = session.duration || 60;
+
+  const end = start + duration * 60000;
+
+  if (now >= start && now <= end) return "live";
+  if (now < start) return "upcoming";
+  return "ended";
+};
 
   // =====================
   // COMPLETE TOPIC
@@ -222,7 +223,6 @@ export default function StudentDashboard() {
   return (
     <div style={{ display: "flex", height: "100vh", fontFamily: "Arial" }}>
 
-      {/* SIDEBAR */}
       <div style={sidebar}>
         <h2>🎓 LMS</h2>
         <p style={{ fontSize: 12 }}>{user?.email}</p>
@@ -248,42 +248,42 @@ export default function StudentDashboard() {
         </button>
       </div>
 
-      {/* MAIN */}
       <div style={main}>
 
         <h1>Welcome 👋</h1>
 
-        {/* LIVE */}
         <div style={cardStyle}>
           <h2>🔴 Live Classes</h2>
 
           {filteredSessions.length === 0 ? (
             <p>No live sessions</p>
           ) : (
-            filteredSessions.map(s => {
+            Array.from(
+  new Map(
+    filteredSessions.map(s => [s.course?.toLowerCase(), s])
+  ).values()
+).map(s => {
               const status = getSessionStatus(s);
 
               return (
                 <div key={s.id} style={cardStyle}>
                   <h4>
-                    {status === "live" && "🔴 LIVE "}
-                    {status === "upcoming" && "⏳ "}
-                    {status === "ended" && "✔ "}
-                    {s.title}
-                  </h4>
+ {status === "live" && "🔴 LIVE "}
+{status === "upcoming" && "⏳ "}
+  {s.course?.toUpperCase() || "LIVE CLASS"}
+</h4>
 
-                  {status === "live" && (
-                    <a href={s.link} target="_blank" rel="noreferrer" style={liveBtn}>
-                      Join Live
-                    </a>
-                  )}
+                {status === "live" && s.link && (
+  <a href={s.link} target="_blank" rel="noreferrer" style={liveBtn}>
+    Join Live
+  </a>
+)}
                 </div>
               );
             })
           )}
         </div>
 
-        {/* ENROLLMENT */}
         {selectedCourse && !isEnrolled ? (
           <div style={cardStyle}>
             <h3>🔒 Not Enrolled</h3>
@@ -304,7 +304,6 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* TOPICS */}
         {selectedCourse && isEnrolled && topics.map(t => {
           const done = t.completedBy?.includes(userId);
 
@@ -334,9 +333,7 @@ export default function StudentDashboard() {
   );
 }
 
-// =====================
-// STYLES
-// =====================
+// STYLES (UNCHANGED)
 const center = {
   display: "flex",
   justifyContent: "center",

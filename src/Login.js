@@ -4,7 +4,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
@@ -15,16 +15,14 @@ export default function Login() {
 
   const navigate = useNavigate();
 
-  // 🔐 ADMIN WHITELIST
   const ADMIN_EMAILS = [
     "onkobagodfrey@gmail.com"
   ];
 
   // =====================
-  // LOGIN FUNCTION
+  // LOGIN
   // =====================
   const handleLogin = async () => {
-
     if (!email || !password) {
       alert("Please fill all fields");
       return;
@@ -33,7 +31,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-
       const userCred = await signInWithEmailAndPassword(
         auth,
         email.trim(),
@@ -42,17 +39,21 @@ export default function Login() {
 
       const user = userCred.user;
 
-      // 🔥 ROLE LOGIC
       const isAdmin = ADMIN_EMAILS.includes(user.email);
       const role = isAdmin ? "admin" : "student";
 
-      // 💾 SAVE ROLE
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        role: role
-      });
+      // 🔥 CHECK BEFORE WRITING (prevents overwriting every login)
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
 
-      // 🚀 REDIRECT
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          email: user.email,
+          role: role
+        });
+      }
+
+      // 🚀 SAFE REDIRECT
       if (role === "admin") {
         navigate("/admin");
       } else {
@@ -60,8 +61,6 @@ export default function Login() {
       }
 
     } catch (error) {
-
-      // 🔥 CLEAN ERROR MESSAGES
       if (error.code === "auth/user-not-found") {
         alert("Account not found. Please register.");
       } else if (error.code === "auth/wrong-password") {
@@ -118,11 +117,7 @@ export default function Login() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{
-            width: "100%",
-            padding: 10,
-            marginBottom: 10
-          }}
+          style={{ width: "100%", padding: 10, marginBottom: 10 }}
         />
 
         <input
@@ -130,11 +125,7 @@ export default function Login() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{
-            width: "100%",
-            padding: 10,
-            marginBottom: 10
-          }}
+          style={{ width: "100%", padding: 10, marginBottom: 10 }}
         />
 
         <button
@@ -145,14 +136,12 @@ export default function Login() {
             padding: 10,
             background: loading ? "gray" : "green",
             color: "white",
-            border: "none",
-            cursor: "pointer"
+            border: "none"
           }}
         >
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        {/* 🔥 RESET PASSWORD BUTTON */}
         <button
           onClick={handleReset}
           style={{
@@ -161,8 +150,7 @@ export default function Login() {
             marginTop: 10,
             background: "orange",
             color: "white",
-            border: "none",
-            cursor: "pointer"
+            border: "none"
           }}
         >
           Reset Password
