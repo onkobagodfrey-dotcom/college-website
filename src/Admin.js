@@ -11,6 +11,7 @@ import {
   doc,
   updateDoc,
   setDoc,
+  getDoc
 } from "firebase/firestore";
 
 export default function Admin() {
