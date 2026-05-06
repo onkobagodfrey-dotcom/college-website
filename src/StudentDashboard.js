@@ -46,69 +46,113 @@ export default function StudentDashboard() {
   // ENROLLMENTS
   // =====================
   useEffect(() => {
-    if (!user) return;
+  if (!user) return;
 
-    const load = async () => {
-      setEnrollLoading(true);
+  const load = async () => {
+    setEnrollLoading(true);
 
-      const ref = doc(db, "enrollments", user.email.toLowerCase());
-      const snap = await getDoc(ref);
+    const emailKey = user.email.toLowerCase();
 
-      if (snap.exists()) {
-        const data = snap.data();
+    // PRIMARY SYSTEM
+    const ref = doc(db, "enrollments", emailKey);
+    const snap = await getDoc(ref);
 
-        setEnrolledCourses(
-          (data.courses || []).map(c => c.toLowerCase())
-        );
-      } else {
-        setEnrolledCourses([]);
-      }
+    let coursesList = [];
 
+    if (snap.exists()) {
+      coursesList = (snap.data().courses || []).map(c => c.toLowerCase());
+    }
+
+    // SECONDARY SYSTEM (Admin old data)
+    const unsub = onSnapshot(collection(db, "studentEnrollments"), (snap2) => {
+      const matches = snap2.docs
+        .map(d => d.data())
+        .filter(e => e.email === emailKey)
+        .map(e => e.course.toLowerCase());
+
+      const combined = [...new Set([...coursesList, ...matches])];
+
+      setEnrolledCourses(combined);
       setEnrollLoading(false);
-    };
+    });
 
-    load();
-  }, [user]);
+    return () => unsub();
+  };
+
+  load();
+}, [user]);
 
   // =====================
   // COURSES
   // =====================
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "courses"), (snap) => {
-      setCourses(
+
+useEffect(() => {
+  if (enrollLoading) return;
+
+  const loadCourses = async () => {
+    const results = [];
+
+    for (let courseId of enrolledCourses) {
+      try {
+        const ref = doc(db, "courses", courseId.toUpperCase());
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          results.push({
+            id: snap.id,
+            ...snap.data()
+          });
+        }
+      } catch (err) {
+        console.log("Blocked course:", courseId);
+      }
+    }
+
+    setCourses(results);
+  };
+
+  loadCourses();
+}, [enrolledCourses, enrollLoading]);
+ // =====================
+  // NORMALIZATION
+  // =====================
+ const selectedCourseData =
+  courses.find(c => c.id === selectedCourse);
+
+const selectedCourseName =
+  selectedCourseData?.name?.toLowerCase();
+
+const isEnrolled =
+  selectedCourse &&
+  enrolledCourses.includes(selectedCourse.toLowerCase());
+
+  // =====================
+// TOPICS (SECURE)
+// =====================
+useEffect(() => {
+  if (!selectedCourse || !isEnrolled) {
+    setTopics([]);
+    return;
+  }
+
+  const unsub = onSnapshot(
+    collection(db, "courses", selectedCourse, "topics"),
+    (snap) => {
+      setTopics(
         snap.docs.map(d => ({
           id: d.id,
           ...d.data()
         }))
       );
-    });
-
-    return () => unsub();
-  }, []);
-
-  // =====================
-  // TOPICS
-  // =====================
-  useEffect(() => {
-    if (!selectedCourse) {
+    },
+    (error) => {
+      console.log("Topics blocked:", error.message);
       setTopics([]);
-      return;
     }
+  );
 
-    const unsub = onSnapshot(
-      collection(db, "courses", selectedCourse, "topics"),
-      (snap) => {
-        setTopics(
-          snap.docs.map(d => ({
-            id: d.id,
-            ...d.data()
-          }))
-        );
-      }
-    );
-
-    return () => unsub();
-  }, [selectedCourse]);
+  return () => unsub();
+}, [selectedCourse, isEnrolled]);
 
   // =====================
   // LIVE SESSIONS
@@ -125,24 +169,6 @@ export default function StudentDashboard() {
 
     return () => unsub();
   }, []);
-
-  // =====================
-  // NORMALIZATION
-  // =====================
-  const selectedCourseData =
-    courses.find(c => c.id === selectedCourse);
-
-  const selectedCourseName =
-    selectedCourseData?.name?.toLowerCase();
-
-  // =====================
-  // ✅ FIXED ENROLLMENT CHECK (COMBINED SAFE)
-  // =====================
-  const isEnrolled =
-    selectedCourse
-      ? enrolledCourses.includes(selectedCourse) || // NEW (correct)
-        enrolledCourses.includes(selectedCourseName) // OLD support
-      : true;
 
   // =====================
   // LIVE FILTER

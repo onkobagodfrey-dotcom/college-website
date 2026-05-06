@@ -3,6 +3,7 @@ import { auth } from "./firebase";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
+
 import {
   collection,
   onSnapshot,
@@ -107,73 +108,91 @@ export default function Admin() {
   // =====================
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "studentEnrollments"), (snap) => {
-      setEnrollments(
-        snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      );
+      setEnrollments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
     return () => unsub();
   }, []);
 
   // =====================
-  // ADD COURSE
+  // ENROLL STUDENT
   // =====================
-  const addCourse = async () => {
-    if (!newCourse.trim()) return;
+  const enrollStudent = async (uid, courseId) => {
+    const enrollRef = doc(db, "enrollments", uid);
 
-    const courseId = newCourse.trim().toLowerCase();
+    const snap = await getDoc(enrollRef);
 
-    await addDoc(collection(db, "courses"), {
-      id: courseId,
-      name: newCourse.trim()
+    let existing = [];
+
+    if (snap.exists()) {
+      existing = snap.data().courses || [];
+    }
+
+    await setDoc(enrollRef, {
+      courses: [...new Set([...existing, courseId])]
     });
-
-    setNewCourse("");
   };
 
   // =====================
-  // ADD STUDENT (FIXED)
+  // ADD COURSE
   // =====================
-  const addStudent = async () => {
-    if (!name || !course || !email) return;
+  // =====================
+// ADD COURSE (FIXED - ONLY ONE VERSION)
+// =====================
+const addCourse = async () => {
+  if (!newCourse.trim()) return;
 
-    const uid = email.trim().toLowerCase();
-    const courseId = course;
+  const courseId = newCourse.trim().toLowerCase();
 
-    await setDoc(doc(db, "students", uid), {
-      name: name.trim(),
-      email: uid
-    });
-
-    // Save enrollment record (clean structure)
-    await setDoc(doc(db, "studentEnrollments", uid + "_" + courseId), {
-      name: name.trim(),
-      email: uid,
-      course: courseId,
+  try {
+    await addDoc(collection(db, "courses"), {
+      id: courseId,
+      name: newCourse.trim(),
       createdAt: new Date()
     });
 
-    setName("");
-    setCourse("");
-    setEmail("");
-  };
+    setNewCourse("");
+  } catch (error) {
+    console.error("Error adding course:", error);
+  }
+};
+
+   // =====================
+// ADD STUDENT (FIXED)
+// =====================
+const addStudent = async () => {
+  if (!name.trim() || !email.trim() || !course) return;
+
+  const uid = email.trim();
+  const courseId = course;
+
+  await setDoc(doc(db, "studentEnrollments", uid + "_" + courseId), {
+    name: name.trim(),
+    email: uid,
+    course: courseId,
+    createdAt: new Date()
+  });
+
+  setName("");
+  setCourse("");
+  setEmail("");
+};
 
   // =====================
-  // DELETE STUDENT (FIXED)
+  // DELETE STUDENT
   // =====================
   const deleteStudent = async (id, email) => {
     await deleteDoc(doc(db, "students", id));
 
-    // remove enrollment rows linked to this student
-    const q = enrollments.filter(e => e.email === email);
+    const related = enrollments.filter(e => e.email === email);
 
-    for (let e of q) {
+    for (let e of related) {
       await deleteDoc(doc(db, "studentEnrollments", e.id));
     }
   };
 
   // =====================
-  // TOPIC FUNCTIONS
+  // TOPICS
   // =====================
   const addTopic = async () => {
     if (!topicTitle || !topicContent || !topicCourse) return;
@@ -217,27 +236,24 @@ export default function Admin() {
   // =====================
   const toggleLiveClass = async (courseName) => {
 
-  // 1. FIND ANY ACTIVE LIVE CLASS
-  const activeSessions = liveClasses.filter(l => l.isLive);
+    const activeSessions = liveClasses.filter(l => l.isLive);
 
-  // 2. STOP ALL ACTIVE FIRST (IMPORTANT FIX)
-  for (let session of activeSessions) {
-    await updateDoc(doc(db, "liveClasses", session.id), {
-      isLive: false,
-      endedAt: new Date()
+    for (let session of activeSessions) {
+      await updateDoc(doc(db, "liveClasses", session.id), {
+        isLive: false,
+        endedAt: new Date()
+      });
+    }
+
+    await addDoc(collection(db, "liveClasses"), {
+      course: courseName,
+      isLive: true,
+      startedAt: new Date(),
+      link: "https://meet.google.com/new"
     });
-  }
 
-  // 3. START NEW ONE ONLY
-  await addDoc(collection(db, "liveClasses"), {
-    course: courseName,
-    isLive: true,
-    startedAt: new Date(),
-    link: "https://meet.google.com/new"
-  });
-
-  window.open("https://meet.google.com/new", "_blank");
-};
+    window.open("https://meet.google.com/new", "_blank");
+  };
 
   // =====================
   // UI
@@ -245,7 +261,6 @@ export default function Admin() {
   return (
     <div style={{ padding: 20, textAlign: "center" }}>
 
-      {/* LOGOUT */}
       <button
         onClick={handleLogout}
         style={{
@@ -266,14 +281,12 @@ export default function Admin() {
 
       <hr />
 
-      {/* COURSES */}
       <h3>📚 Add Course</h3>
       <input value={newCourse} onChange={(e) => setNewCourse(e.target.value)} />
       <button onClick={addCourse}>Add</button>
 
       <hr />
 
-      {/* LIVE */}
       <h3>🎥 Live Classes</h3>
 
       {courses.map(c => {
@@ -303,7 +316,6 @@ export default function Admin() {
 
       <hr />
 
-      {/* TOPICS */}
       <h3>📖 Topics</h3>
 
       <select onChange={(e) => setTopicCourse(e.target.value)}>
@@ -327,7 +339,6 @@ export default function Admin() {
 
       <hr />
 
-      {/* STUDENTS */}
       <h3>👨‍🎓 Students</h3>
 
       <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -349,7 +360,6 @@ export default function Admin() {
 
       <hr />
 
-      {/* ENROLLMENT TABLE */}
       <h3>📊 Student Enrollment Table</h3>
 
       <table border="1" cellPadding="10" style={{ margin: "0 auto", background: "white" }}>
@@ -374,7 +384,6 @@ export default function Admin() {
 
       <hr />
 
-      {/* STUDENT LIST */}
       <h3>👥 Students List</h3>
 
       {students.map(s => (
