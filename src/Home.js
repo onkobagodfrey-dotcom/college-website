@@ -149,7 +149,7 @@ export default function HomePage() {
 const styles = {
   page: {
     fontFamily: "Arial",
-    background: "#1ec734"
+    background: "#5e0cf5"
   },
 
   header: {
@@ -157,7 +157,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "15px 30px",
-    background: "#0f172a",
+    background: "#2fee38",
     color: "white"
   },
 
@@ -187,7 +187,7 @@ const styles = {
 
   registerBtn: {
     padding: "8px 15px",
-    background: "#22c55e",
+    background: "#f52626",
     border: "none",
     color: "white",
     cursor: "pointer"
@@ -199,13 +199,13 @@ const styles = {
   },
 
   title: {
-    fontSize: 36,
-    marginBottom: 10
+    fontSize: 46,
+    marginBottom: 13
   },
 
   subtitle: {
     fontSize: 18,
-    color: "#475569",
+    color: "#ee1b1b",
     maxWidth: 600,
     margin: "0 auto 20px"
   },
@@ -228,7 +228,7 @@ const styles = {
     padding: "12px 20px",
     background: "blue",
     border: "1px solid #2563eb",
-    color: "#2563eb",
+    color: "#e8eb25ea",
     cursor: "pointer"
   },
 
@@ -240,7 +240,7 @@ const styles = {
   sectionLight: {
     padding: 40,
     textAlign: "center",
-    background: "#eef2f7"
+    background: "#0f0bf0"
   },
 
   cards: {
@@ -265,11 +265,11 @@ const styles = {
   contactSection: {
     padding: 40,
     textAlign: "center",
-    background: "#ffffff"
+    background: "#e79933fa"
   },
 
   contactText: {
-    color: "#475569",
+    color: "#010914",
     marginBottom: 20
   },
 
@@ -283,7 +283,7 @@ const styles = {
 
   contactBtn: {
     padding: "12px 20px",
-    background: "#22c55e",
+    background: "#1dee0a",
     color: "white",
     border: "none",
     cursor: "pointer",
@@ -293,7 +293,7 @@ const styles = {
   footer: {
     textAlign: "center",
     padding: 20,
-    background: "#0f172a",
+    background: "#f30e0e",
     color: "white",
     marginTop: 30
   }
