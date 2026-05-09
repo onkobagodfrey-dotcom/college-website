@@ -1,205 +1,170 @@
 import { signOut } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { db } from "./firebase";
+
+import LiveClasses from "./LiveClasses";
+import Students from "./Students";
+import Topics from "./Topics";
 
 import {
   collection,
-  onSnapshot,
   addDoc,
   deleteDoc,
   doc,
   updateDoc,
   setDoc,
-  getDoc
+  getDoc,
+  getDocs,
+  onSnapshot
 } from "firebase/firestore";
 
 export default function Admin() {
-
-  // =====================
-  // NAVIGATION + LOGOUT
-  // =====================
   const navigate = useNavigate();
 
+  // ================= LOGOUT =================
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/login");
   };
 
-  // =====================
-  // STATES
-  // =====================
+  // ================= STATES =================
   const [students, setStudents] = useState([]);
-  const [name, setName] = useState("");
-  const [course, setCourse] = useState("");
-  const [email, setEmail] = useState("");
-
   const [courses, setCourses] = useState([]);
+  const [liveClasses, setLiveClasses] = useState([]);
+
   const [newCourse, setNewCourse] = useState("");
 
   const [topicTitle, setTopicTitle] = useState("");
   const [topicContent, setTopicContent] = useState("");
   const [topicCourse, setTopicCourse] = useState("");
-
   const [editId, setEditId] = useState(null);
-  const [topics, setTopics] = useState([]);
 
-  const [liveClasses, setLiveClasses] = useState([]);
-  const [enrollments, setEnrollments] = useState([]);
+  // ================= FIRESTORE LISTENERS =================
 
-  const [loading, setLoading] = useState(true);
-
-  // =====================
-  // STUDENTS
-  // =====================
+  // STUDENTS (FIXED COLLECTION)
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "students"), (snap) => {
-      setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoading(false);
+    const unsub = onSnapshot(collection(db, "enrollments"), (snap) => {
+      setStudents(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        }))
+      );
     });
-
-    return () => unsub();
+    return unsub;
   }, []);
 
-  // =====================
   // COURSES
-  // =====================
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "courses"), (snap) => {
       setCourses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
-    return () => unsub();
+    return unsub;
   }, []);
 
-  // =====================
-  // TOPICS
-  // =====================
-  useEffect(() => {
-    if (!topicCourse) {
-      setTopics([]);
-      return;
-    }
-
-    const unsub = onSnapshot(
-      collection(db, "courses", topicCourse, "topics"),
-      (snap) => {
-        setTopics(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }
-    );
-
-    return () => unsub();
-  }, [topicCourse]);
-
-  // =====================
   // LIVE CLASSES
-  // =====================
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "liveClasses"), (snap) => {
       setLiveClasses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-
-    return () => unsub();
+    return unsub;
   }, []);
 
-  // =====================
-  // ENROLLMENT TABLE
-  // =====================
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "studentEnrollments"), (snap) => {
-      setEnrollments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+  // ================= COURSES =================
+  const addCourse = async () => {
+    if (!newCourse.trim()) return;
 
-    return () => unsub();
-  }, []);
-
-  // =====================
-  // ENROLL STUDENT
-  // =====================
-  const enrollStudent = async (uid, courseId) => {
-    const enrollRef = doc(db, "enrollments", uid);
-
-    const snap = await getDoc(enrollRef);
-
-    let existing = [];
-
-    if (snap.exists()) {
-      existing = snap.data().courses || [];
-    }
-
-    await setDoc(enrollRef, {
-      courses: [...new Set([...existing, courseId])]
-    });
-  };
-
-  // =====================
-  // ADD COURSE
-  // =====================
-  // =====================
-// ADD COURSE (FIXED - ONLY ONE VERSION)
-// =====================
-const addCourse = async () => {
-  if (!newCourse.trim()) return;
-
-  const courseId = newCourse.trim().toLowerCase();
-
-  try {
     await addDoc(collection(db, "courses"), {
-      id: courseId,
       name: newCourse.trim(),
       createdAt: new Date()
     });
 
     setNewCourse("");
-  } catch (error) {
-    console.error("Error adding course:", error);
-  }
-};
-
-   // =====================
-// ADD STUDENT (FIXED)
-// =====================
-const addStudent = async () => {
-  if (!name.trim() || !email.trim() || !course) return;
-
-  const uid = email.trim();
-  const courseId = course;
-
-  await setDoc(doc(db, "studentEnrollments", uid + "_" + courseId), {
-    name: name.trim(),
-    email: uid,
-    course: courseId,
-    createdAt: new Date()
-  });
-
-  setName("");
-  setCourse("");
-  setEmail("");
-};
-
-  // =====================
-  // DELETE STUDENT
-  // =====================
-  const deleteStudent = async (id, email) => {
-    await deleteDoc(doc(db, "students", id));
-
-    const related = enrollments.filter(e => e.email === email);
-
-    for (let e of related) {
-      await deleteDoc(doc(db, "studentEnrollments", e.id));
-    }
   };
 
-  // =====================
-  // TOPICS
-  // =====================
+  // ================= STUDENT ENROLLMENT (FIXED) =================
+  const addStudent = async (name, email, course) => {
+    if (!name || !email || !course) return;
+
+    const ref = doc(db, "enrollments", email.toLowerCase());
+    const snap = await getDoc(ref);
+
+    const existingCourses = snap.exists()
+      ? snap.data().courses || []
+      : [];
+
+    await setDoc(ref, {
+      name,
+      email,
+      courses: [...new Set([...existingCourses, course])],
+      updatedAt: new Date()
+    });
+  };
+
+  // ================= DELETE STUDENT =================
+  const deleteStudent = async (id) => {
+    await deleteDoc(doc(db, "enrollments", id));
+  };
+
+  // ================= LIVE CLASS TOGGLE =================
+ const toggleLiveClass = async (courseId) => {
+
+  // FIND CURRENT COURSE
+  const current = liveClasses.find(
+    (c) => c.course === courseId
+  );
+
+  // IF LIVE → STOP IT
+  if (current && current.isLive) {
+
+    await updateDoc(
+      doc(db, "liveClasses", current.id),
+      {
+        isLive: false
+      }
+    );
+
+    return;
+  }
+
+  // STOP ALL OTHER LIVE CLASSES
+  const snap = await getDocs(
+    collection(db, "liveClasses")
+  );
+
+  for (const d of snap.docs) {
+    await updateDoc(
+      doc(db, "liveClasses", d.id),
+      {
+        isLive: false
+      }
+    );
+  }
+
+  // START NEW LIVE CLASS
+  await setDoc(
+    doc(db, "liveClasses", courseId),
+    {
+      course: courseId,
+      isLive: true,
+      startedAt: new Date(),
+      link: "https://meet.google.com/new"
+    }
+  );
+
+  window.open(
+    "https://meet.google.com/new",
+    "_blank"
+  );
+};
+  // ================= TOPICS =================
   const addTopic = async () => {
     if (!topicTitle || !topicContent || !topicCourse) return;
 
     await addDoc(collection(db, "courses", topicCourse, "topics"), {
-      title: topicTitle.trim(),
-      content: topicContent.trim(),
+      title: topicTitle,
+      content: topicContent,
       completedBy: []
     });
 
@@ -221,179 +186,58 @@ const addStudent = async () => {
     setEditId(null);
   };
 
-  const deleteTopic = async (id) => {
-    await deleteDoc(doc(db, "courses", topicCourse, "topics", id));
-  };
-
-  const startEdit = (t) => {
-    setEditId(t.id);
-    setTopicTitle(t.title);
-    setTopicContent(t.content);
-  };
-
-  // =====================
-  // LIVE CLASS
-  // =====================
-  const toggleLiveClass = async (courseName) => {
-
-    const activeSessions = liveClasses.filter(l => l.isLive);
-
-    for (let session of activeSessions) {
-      await updateDoc(doc(db, "liveClasses", session.id), {
-        isLive: false,
-        endedAt: new Date()
-      });
-    }
-
-    await addDoc(collection(db, "liveClasses"), {
-      course: courseName,
-      isLive: true,
-      startedAt: new Date(),
-      link: "https://meet.google.com/new"
-    });
-
-    window.open("https://meet.google.com/new", "_blank");
-  };
-
-  // =====================
-  // UI
-  // =====================
+  // ================= UI =================
   return (
     <div style={{ padding: 20, textAlign: "center" }}>
 
-      <button
-        onClick={handleLogout}
-        style={{
-          position: "absolute",
-          top: 20,
-          right: 20,
-          padding: 10,
-          background: "red",
-          color: "white",
-          border: "none",
-          borderRadius: 5
-        }}
-      >
-        Logout
-      </button>
+      <button onClick={handleLogout}>Logout</button>
 
       <h2>🧑‍💻 LMS Admin Dashboard</h2>
 
       <hr />
 
+      {/* COURSES */}
       <h3>📚 Add Course</h3>
-      <input value={newCourse} onChange={(e) => setNewCourse(e.target.value)} />
+      <input
+        value={newCourse}
+        onChange={(e) => setNewCourse(e.target.value)}
+      />
       <button onClick={addCourse}>Add</button>
 
       <hr />
 
-      <h3>🎥 Live Classes</h3>
-
-      {courses.map(c => {
-        const isLive = liveClasses.find(
-          l => l.course?.toLowerCase().trim() === c.name?.toLowerCase().trim()
-        );
-
-        return (
-          <div key={c.id}>
-            <b>{c.name}</b>
-
-            <button
-              onClick={() => toggleLiveClass(c.name)}
-              style={{
-                marginLeft: 10,
-                background: isLive ? "red" : "green",
-                color: "white"
-              }}
-            >
-              {isLive ? "STOP LIVE" : "START LIVE"}
-            </button>
-
-            {isLive && " 🔴 LIVE"}
-          </div>
-        );
-      })}
+      {/* LIVE CLASSES */}
+      <LiveClasses
+        courses={courses}
+        liveClasses={liveClasses}
+        toggleLiveClass={toggleLiveClass}
+      />
 
       <hr />
 
-      <h3>📖 Topics</h3>
-
-      <select onChange={(e) => setTopicCourse(e.target.value)}>
-        <option value="">Select Course</option>
-        {courses.map(c => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
-
-      <br /><br />
-
-      <input value={topicTitle} onChange={(e) => setTopicTitle(e.target.value)} />
-      <br /><br />
-
-      <textarea value={topicContent} onChange={(e) => setTopicContent(e.target.value)} />
-      <br /><br />
-
-      <button onClick={editId ? updateTopic : addTopic}>
-        {editId ? "Update" : "Add"}
-      </button>
+      {/* TOPICS */}
+      <Topics
+        courses={courses}
+        topicTitle={topicTitle}
+        setTopicTitle={setTopicTitle}
+        topicContent={topicContent}
+        setTopicContent={setTopicContent}
+        topicCourse={topicCourse}
+        setTopicCourse={setTopicCourse}
+        addTopic={addTopic}
+        updateTopic={updateTopic}
+        editId={editId}
+      />
 
       <hr />
 
-      <h3>👨‍🎓 Students</h3>
-
-      <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-      <br /><br />
-
-      <select onChange={(e) => setCourse(e.target.value)}>
-        <option value="">Select Course</option>
-        {courses.map(c => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
-
-      <br /><br />
-
-      <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <br /><br />
-
-      <button onClick={addStudent}>Add Student</button>
-
-      <hr />
-
-      <h3>📊 Student Enrollment Table</h3>
-
-      <table border="1" cellPadding="10" style={{ margin: "0 auto", background: "white" }}>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Course</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {enrollments.map(e => (
-            <tr key={e.id}>
-              <td>{e.name}</td>
-              <td>{e.email}</td>
-              <td>{e.course}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <hr />
-
-      <h3>👥 Students List</h3>
-
-      {students.map(s => (
-        <div key={s.id}>
-          {s.name} - {s.email}
-          <button onClick={() => deleteStudent(s.id, s.email)}>
-            Delete
-          </button>
-        </div>
-      ))}
+      {/* STUDENTS */}
+      <Students
+        students={students}
+        courses={courses}
+        addStudent={addStudent}
+        deleteStudent={deleteStudent}
+      />
 
     </div>
   );

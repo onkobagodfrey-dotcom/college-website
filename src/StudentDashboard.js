@@ -82,36 +82,31 @@ export default function StudentDashboard() {
   load();
 }, [user]);
 
-  // =====================
-  // COURSES
-  // =====================
-
+// =====================
+// COURSES
+// =====================
 useEffect(() => {
   if (enrollLoading) return;
 
-  const loadCourses = async () => {
-    const results = [];
+  const unsub = onSnapshot(collection(db, "courses"), (snap) => {
 
-    for (let courseId of enrolledCourses) {
-      try {
-        const ref = doc(db, "courses", courseId.toUpperCase());
-        const snap = await getDoc(ref);
+    const allCourses = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-        if (snap.exists()) {
-          results.push({
-            id: snap.id,
-            ...snap.data()
-          });
-        }
-      } catch (err) {
-        console.log("Blocked course:", courseId);
-      }
-    }
+    // FILTER ONLY ENROLLED COURSES
+    const filtered = allCourses.filter(course =>
+      enrolledCourses.includes(
+        course.name?.toLowerCase()
+      )
+    );
 
-    setCourses(results);
-  };
+    setCourses(filtered);
+  });
 
-  loadCourses();
+  return () => unsub();
+
 }, [enrolledCourses, enrollLoading]);
  // =====================
   // NORMALIZATION
@@ -174,10 +169,15 @@ useEffect(() => {
   // LIVE FILTER
   // =====================
   const filteredSessions = selectedCourse
-    ? liveSessions.filter(s =>
-       s.course?.toLowerCase().trim() === selectedCourseName?.toLowerCase().trim()
-      )
-    : liveSessions;
+  ? liveSessions.filter(
+      (s) =>
+        s.course?.toLowerCase().trim() ===
+          selectedCourseName?.toLowerCase().trim() &&
+        s.isLive === true
+    )
+  : liveSessions.filter(
+      (s) => s.isLive === true
+    ).slice(-1);
 
   // =====================
   // STATUS
@@ -199,19 +199,31 @@ useEffect(() => {
   return "ended";
 };
 
-  // =====================
-  // COMPLETE TOPIC
-  // =====================
-  const markAsCompleted = async (topicId, completedBy = []) => {
-    if (!userId || !selectedCourse) return;
-    if (completedBy?.includes(userId)) return;
+ // =====================
+// COMPLETE TOPIC
+// =====================
+const markAsCompleted = async (topicId, completedBy = []) => {
 
-    const ref = doc(db, "courses", selectedCourse, "topics", topicId);
+  if (!userId || !selectedCourse) return;
 
-    await updateDoc(ref, {
-      completedBy: [...(completedBy || []), userId]
-    });
-  };
+  const safeCompletedBy = Array.isArray(completedBy)
+    ? completedBy
+    : [];
+
+  if (safeCompletedBy.includes(userId)) return;
+
+  const ref = doc(
+    db,
+    "courses",
+    selectedCourse,
+    "topics",
+    topicId
+  );
+
+  await updateDoc(ref, {
+    completedBy: [...safeCompletedBy, userId]
+  });
+};
 
   // =====================
   // LOGOUT

@@ -110,12 +110,13 @@ export default function HomePage() {
   rel="noreferrer"
   style={styles.whatsappBtn}
 >
-  💬
+  Reach us on 
+    WhatsApp
 </a>
 
           <div>
             <h4>📧 Email</h4>
-            <p>gitsupport@gmail.com</p>
+            <p>gti@gmail.com</p>
           </div>
 
           <div>

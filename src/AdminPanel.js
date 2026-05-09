@@ -3,7 +3,9 @@ import { db } from "./firebase";
 import {
   collection,
   addDoc,
-  onSnapshot
+  onSnapshot,
+  query,
+  orderBy
 } from "firebase/firestore";
 
 export default function AdminPanel() {
@@ -12,11 +14,12 @@ export default function AdminPanel() {
   // STATE
   // =====================
   const [courses, setCourses] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState("");
 
   const [courseTitle, setCourseTitle] = useState("");
   const [topicTitle, setTopicTitle] = useState("");
   const [topicContent, setTopicContent] = useState("");
+  const [topics, setTopics] = useState([]);
 
   // =====================
   // LOAD COURSES
@@ -35,13 +38,40 @@ export default function AdminPanel() {
   }, []);
 
   // =====================
+  // LOAD TOPICS (REALTIME)
+  // =====================
+  useEffect(() => {
+    if (!selectedCourse) {
+      setTopics([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, "courses", selectedCourse, "topics"),
+      orderBy("title")
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setTopics(
+        snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+      );
+    });
+
+    return () => unsub();
+  }, [selectedCourse]);
+
+  // =====================
   // CREATE COURSE
   // =====================
   const addCourse = async () => {
-    if (!courseTitle) return;
+    if (!courseTitle.trim()) return;
 
     await addDoc(collection(db, "courses"), {
-      title: courseTitle
+      name: courseTitle.trim(),
+      createdAt: new Date()
     });
 
     setCourseTitle("");
@@ -52,13 +82,14 @@ export default function AdminPanel() {
   // =====================
   const addTopic = async () => {
     if (!selectedCourse) return;
-    if (!topicTitle || !topicContent) return;
+    if (!topicTitle.trim() || !topicContent.trim()) return;
 
     await addDoc(
       collection(db, "courses", selectedCourse, "topics"),
       {
-        title: topicTitle,
-        content: topicContent,
+        title: topicTitle.trim(),
+        content: topicContent.trim(),
+        createdAt: new Date(),
         completedBy: []
       }
     );
@@ -102,18 +133,18 @@ export default function AdminPanel() {
             style={{
               background: selectedCourse === c.id ? "green" : "#eee",
               color: selectedCourse === c.id ? "white" : "black",
-              padding: 5
+              padding: 6
             }}
           >
-            {c.title}
+            {c.name}
           </button>
         </div>
       ))}
 
       <hr />
 
-      {/* ADD TOPICS */}
-      <h3>📖 Add Topics</h3>
+      {/* TOPICS */}
+      <h3>📖 Topics</h3>
 
       {!selectedCourse ? (
         <p>Select a course first</p>
@@ -125,7 +156,7 @@ export default function AdminPanel() {
             onChange={(e) => setTopicTitle(e.target.value)}
           />
 
-          <br />
+          <br /><br />
 
           <textarea
             placeholder="Content"
@@ -133,11 +164,21 @@ export default function AdminPanel() {
             onChange={(e) => setTopicContent(e.target.value)}
           />
 
-          <br />
+          <br /><br />
 
           <button onClick={addTopic}>
             Add Topic
           </button>
+
+          <hr />
+
+          {/* TOPIC LIST */}
+          {topics.map(t => (
+            <div key={t.id} style={{ marginBottom: 10 }}>
+              <b>{t.title}</b>
+              <p>{t.content}</p>
+            </div>
+          ))}
         </>
       )}
 

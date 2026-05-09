@@ -32,7 +32,7 @@ export const db = getFirestore(app);
 ===================================================== */
 
 const actionCodeSettings = {
-  url: "https://college-lms-10caa.web.app/finishSignIn", // 🔥 CHANGE IF USING VERCEL
+  url: window.location.origin + "/finishSignIn",
   handleCodeInApp: true
 };
 
