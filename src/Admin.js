@@ -106,9 +106,11 @@ export default function Admin() {
   const deleteStudent = async (id) => {
     await deleteDoc(doc(db, "enrollments", id));
   };
+  
+const LIVE_MEET_LINK = "https://meet.google.com/bpx-sdfr-shd";
 
-  // ================= LIVE CLASS TOGGLE =================
- const toggleLiveClass = async (courseId) => {
+// ================= LIVE CLASS TOGGLE =================
+const toggleLiveClass = async (courseId) => {
 
   // FIND CURRENT COURSE
   const current = liveClasses.find(
@@ -149,15 +151,17 @@ export default function Admin() {
       course: courseId,
       isLive: true,
       startedAt: new Date(),
-      link: "https://meet.google.com/new"
+      link: LIVE_MEET_LINK
     }
   );
 
+  // OPEN GOOGLE MEET
   window.open(
-    "https://meet.google.com/new",
+    LIVE_MEET_LINK,
     "_blank"
   );
 };
+
   // ================= TOPICS =================
   const addTopic = async () => {
     if (!topicTitle || !topicContent || !topicCourse) return;

@@ -45,11 +45,39 @@ export default function Register() {
     setLoading(false);
   };
 
-  return (
+    return (
     <div style={styles.container}>
-      <div className="card" style={{ width: 300, textAlign: "center" }}>
+      <div
+        className="card"
+        style={{
+          width: 320,
+          textAlign: "center",
+          background: "white",
+          padding: 30,
+          borderRadius: 10
+        }}
+      >
 
-        <h2>Student Registration</h2>
+        {/* GOOGLE FORM FIRST */}
+        <a
+          href="https://forms.gle/YWSVJEBWWzK672Bb6"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "block",
+            marginBottom: 20,
+            padding: 12,
+            background: "green",
+            color: "white",
+            textDecoration: "none",
+            borderRadius: 5,
+            fontWeight: "bold"
+          }}
+        >
+          📝 Fill Student Admission Form
+        </a>
+
+        <h2>Create LMS Account</h2>
 
         <input
           className="input"
@@ -73,7 +101,6 @@ export default function Register() {
           {loading ? "Creating..." : "Register"}
         </button>
 
-        {/* 🔵 SAFE ADDITION */}
         <p style={{ marginTop: 10, fontSize: 14 }}>
           Already have an account? <Link to="/login">Login</Link>
         </p>

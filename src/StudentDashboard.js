@@ -342,29 +342,32 @@ const markAsCompleted = async (topicId, completedBy = []) => {
           </div>
         )}
 
-        {selectedCourse && isEnrolled && topics.map(t => {
-          const done = t.completedBy?.includes(userId);
+                          {selectedCourse && isEnrolled && topics.map(t => {
+  const done = t.completedBy?.includes(userId);
 
-          return (
-            <div key={t.id} style={cardStyle}>
-              <h4>{t.title}</h4>
-              <p>{t.content}</p>
+  return (
+    <div key={t.id} style={cardStyle}>
+      <h4>{t.title}</h4>
+      <p onClick={() => markAsCompleted(t.id, t.completedBy || [])}>
+        {t.content}
+      </p>
 
-              <button
-                onClick={() => markAsCompleted(t.id, t.completedBy || [])}
-                disabled={done}
-                style={{
-                  padding: 8,
-                  background: done ? "gray" : "green",
-                  color: "white",
-                  border: "none"
-                }}
-              >
-                {done ? "Completed" : "Mark Complete"}
-              </button>
-            </div>
-          );
-        })}
+      <button
+        onClick={() => markAsCompleted(t.id, t.completedBy || [])}
+        disabled={done}
+        style={{
+          background: done ? "green" : "#222",
+          color: "white",
+          border: "none",
+          padding: "8px 12px",
+          borderRadius: 5
+        }}
+      >
+        {done ? "Completed" : "Mark Complete"}
+      </button>
+    </div>
+  );
+})}
 
       </div>
     </div>
@@ -433,3 +436,4 @@ const liveBtn = {
   textDecoration: "none",
   borderRadius: 5
 };
+

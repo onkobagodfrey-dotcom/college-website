@@ -110,7 +110,7 @@ export default function Login() {
         boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
       }}>
 
-        <h2>🔐 LMS Login</h2>
+        <h2>🔐GOSOTECH LMS Login</h2>
 
         <input
           type="email"
