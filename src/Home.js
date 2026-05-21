@@ -5,9 +5,11 @@ import img2 from "./images/img2.jpg";
 import img3 from "./images/img3.jpg";
 import img4 from "./images/img4.jpg";
 import img5 from "./images/img5.jpg";
+import img6 from "./images/img6.jpg";
+import img7 from "./images/img7.jpg";
 import logo from "./assets/logo.jpg";
 
-const images = [img1, img2, img3, img4, img5];
+const images = [img1, img2, img3, img4, img5, img6, img7];
 
 export default function Home() {
   const navigate = useNavigate();
@@ -57,7 +59,7 @@ export default function Home() {
     </h1>
 
     <p style={styles.subtitle}>
-      Learn IC3, AIC3 and HSS courses with structured lessons,
+      Learn IC3, AIC3, HSS and OA courses with structured lessons,
       live classes, and progress tracking.
     </p>
 
@@ -84,14 +86,20 @@ export default function Home() {
 
     <div style={styles.cards}>
       <div style={styles.card}>
-        <h3>IC3</h3>
-        <p>Digital literacy: Word, Excel, Internet, Email</p>
+        <h3>Internet and Computing Core Certification (IC3)</h3>
+        <p>Introduction to Computers, Computer System, OS, Word, Excel, Access, Powerpoint, Computer Netwoks, Internet and Email</p>
       </div>
 
       <div style={styles.card}>
-        <h3>AIC3</h3>
-        <p>Advanced digital skills and productivity tools</p>
+        <h3>Advanced Internet and Computing Core Certification (AIC3)</h3>
+        <p>Command line interface, Data Representation, Advanced Word, Excel, Access, Powerpoint,  Data Security and Basic Computer Maintenance And Software Installation</p>
       </div>
+
+       <div style={styles.card}>
+        <h3>OFFICE ADMINISTRATION (OA)</h3>
+        <p>Communication Skills, office Administration Practice, Computer Applications, Records and Information Management, Customer Care And Public Relations and Among Others </p>
+      </div>
+
 
       <div style={styles.card}>
         <h3>HSS</h3>
@@ -171,7 +179,7 @@ export default function Home() {
 const styles = {
   page: {
     fontFamily: "Arial",
-    background: "#540bff"
+    background: "#85c50d"
   },
 
   header: {
@@ -276,7 +284,7 @@ const styles = {
   sectionLight: {
     padding: 40,
     textAlign: "center",
-    background: "#a6df0a"
+    background: "#f00af0"
   },
 
   cards: {
